@@ -1,0 +1,11 @@
+dsh-plugin-mirobody
+Copyright 2026 the dsh-plugin-mirobody authors
+
+This plugin is licensed under the Apache License, Version 2.0.
+
+It calls the Mirobody engine (https://github.com/thetahealth/mirobody),
+which is Copyright Theta Health and also licensed under the Apache License,
+Version 2.0. This package does not redistribute Mirobody's LOINC bundle.
+LOINC is a registered trademark of Regenstrief Institute, Inc.
+UCUM is maintained by the Regenstrief Institute. See Mirobody's
+LICENSE-3RD-PARTY for the terminology licences that engine ships under.

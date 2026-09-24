@@ -1,0 +1,11 @@
+# Mirobody health-data bundle. dsh loads this row after `dsh plugin add`.
+# A later layer with the same id replaces the whole config object.
+- insert:
+    - id: dsh-plugin-mirobody
+      name: dsh-plugin-mirobody
+      config:
+        pythonBin: ''
+        mirobodyHome: ''
+        mcpUrl: ''
+        mcpToken: ''
+        timeoutMs: 30000
