@@ -18,3 +18,5 @@ dsh-plugin-mirobody is a staff and personal DeepSeek Harness surface over [theta
 ## Secrets
 
 `mcpToken` and any credential inside `mcpUrl` live in the local DSH profile config. The status route and `mirobody_status` report only the host and whether a token is set.
+
+The Python bridge does not inherit the harness's environment (API keys, tokens): it gets `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR`, `MIROBODY_HOME`, `PYTHONNOUSERSITE=1` and `PYTHONDONTWRITEBYTECODE=1`, nothing else. This is not a sandbox.

@@ -168,6 +168,15 @@ interface EngineResult {
   reason?: string;
 }
 declare function discoverPython(configured: string): string;
+/**
+ * The whole environment of the Python bridge. Never the harness's own (API keys, tokens, provider
+ * settings): only what a Python process needs to start (PATH, HOME, locale, TMPDIR) and what
+ * bridge/dsh_bridge.py reads (MIROBODY_HOME, the optional source checkout it puts on sys.path).
+ * PYTHONNOUSERSITE=1 keeps ~/.local site-packages out, so mirobody must be installed in the
+ * interpreter's own site-packages (a venv); PYTHONPATH is not passed, mirobodyHome is the way to add
+ * a checkout. Not a sandbox.
+ */
+declare function bridgeEnv(home: string): Record<string, string>;
 declare function runBridgeSync(python: string, home: string, payload: Record<string, unknown>, timeoutMs: number): EngineResult;
 //#endregion
 //#region src/routes.d.ts
@@ -196,4 +205,4 @@ declare const name = "dsh-plugin-mirobody";
 declare const inject: string[];
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { CONNECTION_UNAVAILABLE, Config, type ConnectionGuard, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, discoverPython, guardPreStep, guardRoute, guidanceNote, inject, isJsonRequest, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };
+export { CONNECTION_UNAVAILABLE, Config, type ConnectionGuard, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, bridgeEnv, discoverPython, guardPreStep, guardRoute, guidanceNote, inject, isJsonRequest, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };

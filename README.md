@@ -44,6 +44,8 @@ Then override the row in `~/.dsh/profiles/web/cordis.patch.yml` (replace the fil
 | `mcpToken` | Account JWT when the URL does not carry one (the `access_token` from `POST /password/login`, valid 30 days by default). Leave empty for terminology-only use. |
 | `timeoutMs` | Bridge and MCP budget. Default `30000`. First resolve loads the bundle and can be slower. |
 
+The Python bridge starts with a minimal environment, never the harness's own: `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR`, `MIROBODY_HOME` (from `mirobodyHome`), `PYTHONNOUSERSITE=1` and `PYTHONDONTWRITEBYTECODE=1`. So `pythonBin` must import `mirobody` from its own site-packages (the venv above); a `pip install --user` copy and `PYTHONPATH` are not seen. Use `mirobodyHome` for a source checkout.
+
 ## Tools
 
 | Tool | Where it runs | What it returns |

@@ -44,6 +44,8 @@ dsh plugin --profile web add github:zwbao/dsh-plugin-mirobody
 | `mcpToken` | 地址本身不带凭证时，填账号 JWT（`POST /password/login` 返回的 `access_token`，默认 30 天有效）。只做术语解析可以留空。 |
 | `timeoutMs` | 桥和 MCP 的时限，默认 `30000`。第一次解析要加载词表，可能更慢。 |
 
+Python 桥只拿到最小的环境变量，不继承 Harness 自己的：`PATH`、`HOME`、`LANG`、`LC_ALL`、`TMPDIR`、`MIROBODY_HOME`（来自 `mirobodyHome`）、`PYTHONNOUSERSITE=1` 和 `PYTHONDONTWRITEBYTECODE=1`。所以 `pythonBin` 要能从自己的 site-packages 导入 `mirobody`（即上面的 venv）；`pip install --user` 装的副本和 `PYTHONPATH` 都看不到。源码目录请用 `mirobodyHome`。
+
 ## 工具
 
 | 工具 | 在哪执行 | 返回什么 |

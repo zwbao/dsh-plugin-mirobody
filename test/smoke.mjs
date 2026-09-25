@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -54,6 +55,41 @@ for (const name of ['terminology', 'readings', 'medications', 'genetics']) {
   const raw = readFileSync(join(root, '..', 'skills', name, 'SKILL.md'), 'utf8')
   assert.match(raw, /^---\nname: mirobody-/)
   assert.match(raw, /description:/)
+}
+
+// The bridge gets a minimal environment: never the harness's own keys or tokens.
+{
+  const saved = { ...process.env }
+  process.env.DEEPSEEK_API_KEY = 'sk-should-not-leak'
+  process.env.MIROBODY_LEAK_TEST = 'x'
+  process.env.PYTHONPATH = '/should/not/pass'
+  process.env.TMPDIR = process.env.TMPDIR || '/tmp'
+  const ALLOWED = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'MIROBODY_HOME', 'PYTHONNOUSERSITE', 'PYTHONDONTWRITEBYTECODE']
+  const env = mod.bridgeEnv(' /opt/mirobody ')
+  assert.deepEqual(Object.keys(env).filter((key) => !ALLOWED.includes(key)), [], 'only the allowed variables')
+  assert.equal(env.MIROBODY_HOME, '/opt/mirobody')
+  assert.equal(env.PYTHONNOUSERSITE, '1')
+  assert.equal(env.PATH, process.env.PATH)
+  assert.equal(env.TMPDIR, process.env.TMPDIR)
+  assert.ok(env.LANG)
+  // End to end: a stand-in interpreter that prints the environment it was started with.
+  const dir = mkdtempSync(join(tmpdir(), 'mirobody-env-'))
+  try {
+    const fake = join(dir, 'fake-python')
+    writeFileSync(fake, `#!${process.execPath}\nprocess.stdout.write(JSON.stringify(process.env))\n`)
+    chmodSync(fake, 0o755)
+    const seen = mod.runBridgeSync(fake, '', { op: 'status' }, 20000)
+    assert.equal(seen.DEEPSEEK_API_KEY, undefined, 'no API key reaches the bridge')
+    assert.equal(seen.MIROBODY_LEAK_TEST, undefined)
+    assert.equal(seen.PYTHONPATH, undefined)
+    assert.equal(seen.PYTHONNOUSERSITE, '1')
+    // macOS adds __CF_USER_TEXT_ENCODING to every process it starts; nothing else may appear.
+    assert.deepEqual(Object.keys(seen).filter((key) => !ALLOWED.includes(key) && !key.startsWith('__CF_')), [], `bridge env: ${Object.keys(seen).join(', ')}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+    for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key]
+    Object.assign(process.env, saved)
+  }
 }
 
 const python = [process.env.MIROBODY_PYTHON, join(root, '..', '.venv', 'bin', 'python')]
