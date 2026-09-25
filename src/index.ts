@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import './host-shims.ts'
 import { Config } from './config.ts'
 import { registerCommands } from './commands.ts'
-import { extractUserText, preGuard, wrapGuardMessage } from './guardrails.ts'
+import { guardPreStep } from './guard.ts'
 import { registerPrompt } from './prompt.ts'
 import { registerRoutes } from './routes.ts'
 import { registerSkills } from './skills.ts'
@@ -10,7 +10,9 @@ import { registerTools } from './tools.ts'
 export const name = 'dsh-plugin-mirobody'
 export const inject = ['tools']
 export { Config }
-export { preGuard, wrapGuardMessage } from './guardrails.ts'
+export { preGuard, wrapGuardMessage, ruleLabels, guidanceNote, mentionsMedicine, personText, LABEL_KEYS, EMERGENCY_REPLY_ZH, NO_MEDICATION_CHANGE_ZH } from './guardrails.ts'
+export type { GuardHit, GuardLabels, GuidanceNote } from './guardrails.ts'
+export { guardPreStep, noteMessage } from './guard.ts'
 export { PRODUCT_VERSION, TOOL_NAMES } from './version.ts'
 export { validateGeneticQuery, validateHealthQuery, validateMedicationQuery } from './validate.ts'
 export { discoverPython, runBridgeSync } from './engine.ts'
@@ -23,18 +25,6 @@ export function apply(ctx: Context, config: Config): void {
   registerRoutes(ctx, configSource)
   registerCommands(ctx, configSource)
 
-  ctx.on('agent/pre-step', async (payload, next) => {
-    const text = payload.messages.map((message) => extractUserText(message.content)).join('\n')
-    const hit = preGuard(text)
-    if (!hit) return next()
-    const first = payload.messages[0]
-    if (!first) return { kind: 'reject' }
-    return {
-      kind: 'enter',
-      messages: [{
-        ...first,
-        content: [{ type: 'text', text: wrapGuardMessage(text, hit) }],
-      }],
-    }
-  })
+  // One guidance note after the person's words when the rules flag them; their message is never replaced.
+  ctx.on('agent/pre-step', (payload, next) => guardPreStep(payload, next))
 }
