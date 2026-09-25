@@ -1,5 +1,6 @@
 import Schema from "@deepseek-ai/schemastery";
 import { Context } from "@deepseek-ai/cordis";
+import { IncomingMessage, ServerResponse } from "node:http";
 //#region src/host-shims.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -169,9 +170,30 @@ interface EngineResult {
 declare function discoverPython(configured: string): string;
 declare function runBridgeSync(python: string, home: string, payload: Record<string, unknown>, timeoutMs: number): EngineResult;
 //#endregion
+//#region src/routes.d.ts
+type Handler = (req: IncomingMessage, res: ServerResponse) => void;
+/**
+ * The part of DSH's `connection` service (dsh-client-connection, HostConnectionHandle) the routes use:
+ * the Host/Origin/Sec-Fetch-Site fence, then the signed `dsh-auth` cookie. 401 or 403 rejects.
+ */
+interface ConnectionGuard {
+  requestRejection(request: {
+    headers: IncomingMessage['headers'];
+  }): 401 | 403 | undefined;
+}
+declare const CONNECTION_UNAVAILABLE = "mirobody: DeepSeek Harness connection service unavailable";
+/** application/json, with or without a charset or other parameters. */
+declare function isJsonRequest(req: Pick<IncomingMessage, 'headers'>): boolean;
+/**
+ * DSH's exact routes skip the /api prefix route and its checks, so every Mirobody handler runs them itself,
+ * before anything else: no connection service, no route (503); then DSH's own rejection; then a write
+ * that is not JSON (415), which a page on another site could otherwise send without a preflight.
+ */
+declare function guardRoute(connection: () => ConnectionGuard | null, handler: Handler): Handler;
+//#endregion
 //#region src/index.d.ts
 declare const name = "dsh-plugin-mirobody";
 declare const inject: string[];
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { Config, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, discoverPython, guardPreStep, guidanceNote, inject, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };
+export { CONNECTION_UNAVAILABLE, Config, type ConnectionGuard, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, discoverPython, guardPreStep, guardRoute, guidanceNote, inject, isJsonRequest, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };

@@ -16,6 +16,8 @@ export { guardPreStep, noteMessage } from './guard.ts'
 export { PRODUCT_VERSION, TOOL_NAMES } from './version.ts'
 export { validateGeneticQuery, validateHealthQuery, validateMedicationQuery } from './validate.ts'
 export { discoverPython, runBridgeSync } from './engine.ts'
+export { guardRoute, isJsonRequest, CONNECTION_UNAVAILABLE } from './routes.ts'
+export type { ConnectionGuard } from './routes.ts'
 
 export function apply(ctx: Context, config: Config): void {
   const configSource = () => config

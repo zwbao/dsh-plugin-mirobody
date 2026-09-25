@@ -55,7 +55,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf lib",
     "smoke": "node test/smoke.mjs",
-    "test": "npm run build && node test/smoke.mjs && node test/guard.mjs"
+    "test": "npm run build && node test/smoke.mjs && node test/guard.mjs && node test/routes.mjs"
   },
   "keywords": [
     "dsh-plugin",
