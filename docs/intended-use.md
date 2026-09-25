@@ -6,7 +6,7 @@ dsh-plugin-mirobody is a staff and personal DeepSeek Harness surface over [theta
 
 - Resolves indicator names to LOINC and units to UCUM by calling the installed Mirobody Python engine. That step is offline and does not send the name to a model.
 - Reads indicators, medications, and genotype calls from a Mirobody server the operator configures (`mcpUrl`). The plugin does not open Postgres, does not store a second copy of the chart, and does not perform wearable OAuth or file ingestion. Those stay in Mirobody.
-- Refuses emergency triage beyond "call 120" (988 in the US) and refuses dose changes.
+- Refuses emergency triage beyond "call 120" (988 in the US) and refuses dose changes. It does so by appending one note for the model after the person's message; the message itself is never rewritten.
 
 ## What it does not do
 

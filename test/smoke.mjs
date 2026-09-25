@@ -10,14 +10,14 @@ const root = dirname(fileURLToPath(import.meta.url))
 const pkg = require('../package.json')
 
 assert.equal(pkg.name, 'dsh-plugin-mirobody')
-assert.equal(pkg.version, '1.0.0')
+assert.equal(pkg.version, '1.0.1')
 assert.equal(pkg.license, 'Apache-2.0')
 assert.ok(pkg.dsh.bundle.patch)
 assert.ok(pkg.dsh.client.inject.includes('slots'))
 
 const mod = await import('../lib/index.js')
 assert.equal(mod.name, 'dsh-plugin-mirobody')
-assert.equal(mod.PRODUCT_VERSION, '1.0.0')
+assert.equal(mod.PRODUCT_VERSION, '1.0.1')
 assert.equal(mod.TOOL_NAMES.length, 8)
 assert.deepEqual(mod.TOOL_NAMES.slice(0, 4), [
   'resolve_indicator',
