@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-mirobody",
-  "version": "1.0.1",
+  "version": "0.1.1",
   "description": "DeepSeek Harness plugin for Mirobody: offline LOINC/UCUM terminology plus read-only health, medication, and genotype tools.",
   "repository": {
     "type": "git",

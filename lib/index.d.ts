@@ -137,7 +137,7 @@ declare function guardPreStep<M extends StepMessage>(payload: {
 }, next: () => Promise<PreStepDecision<M>>): Promise<PreStepDecision<M>>;
 //#endregion
 //#region src/version.d.ts
-declare const PRODUCT_VERSION = "1.0.1";
+declare const PRODUCT_VERSION = "0.1.1";
 declare const TOOL_NAMES: readonly ["resolve_indicator", "resolve_reading", "convert_unit", "normalize_unit", "query_health_indicators", "query_medications", "query_genetic_data", "mirobody_status"];
 //#endregion
 //#region src/validate.d.ts

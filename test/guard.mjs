@@ -79,7 +79,7 @@ const change = mod.guidanceNote(mod.ruleLabels('帮我停掉阿司匹林'))
 assert.ok(change.text.includes(mod.NO_MEDICATION_CHANGE_ZH))
 assert.doesNotMatch(change.text, /120/)
 assert.equal(mod.guidanceNote(mod.ruleLabels('父亲有中风史')), null)
-// The 1.0.0 helper returns the note and never repeats the person's words.
+// The 0.1.0 helper returns the note and never repeats the person's words.
 const wrapped = mod.wrapGuardMessage('我胸痛，私密内容', mod.preGuard('我胸痛'))
 assert.match(wrapped, /120/)
 assert.equal(wrapped.includes('私密内容'), false, 'the note does not quote the person')

@@ -246,7 +246,7 @@ export function guidanceNote(labels: GuardLabels): GuidanceNote | null {
   return null
 }
 
-// ---------------------------------------------------------------- compatibility (1.0.0 exports)
+// ---------------------------------------------------------------- compatibility (0.1.0 exports)
 
 export type GuardHit =
   | { code: 'emergency'; reply_zh: string }
