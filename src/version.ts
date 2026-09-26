@@ -1,4 +1,4 @@
-export const PRODUCT_VERSION = '1.0.0'
+export const PRODUCT_VERSION = '0.1.1'
 export const PRODUCT_NAME = 'dsh-plugin-mirobody'
 
 export const TOOL_NAMES = [

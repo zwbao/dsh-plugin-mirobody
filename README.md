@@ -44,6 +44,8 @@ Then override the row in `~/.dsh/profiles/web/cordis.patch.yml` (replace the fil
 | `mcpToken` | Account JWT when the URL does not carry one (the `access_token` from `POST /password/login`, valid 30 days by default). Leave empty for terminology-only use. |
 | `timeoutMs` | Bridge and MCP budget. Default `30000`. First resolve loads the bundle and can be slower. |
 
+The Python bridge starts with a minimal environment, never the harness's own: `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR`, `MIROBODY_HOME` (from `mirobodyHome`), `PYTHONNOUSERSITE=1` and `PYTHONDONTWRITEBYTECODE=1`. So `pythonBin` must import `mirobody` from its own site-packages (the venv above); a `pip install --user` copy and `PYTHONPATH` are not seen. Use `mirobodyHome` for a source checkout.
+
 ## Tools
 
 | Tool | Where it runs | What it returns |
@@ -66,11 +68,13 @@ Then override the row in `~/.dsh/profiles/web/cordis.patch.yml` (replace the fil
 - `GET /api/mirobody/resolve?q=血红蛋白&q=血脂`
 - `GET /api/mirobody/version`
 
-The web tab is **Mirobody**. It forwards the DSH `token` query parameter the same way the page was opened.
+Each route runs DeepSeek Harness's own connection check first (Host/Origin and the session cookie): 401 or 403 otherwise, 503 when the connection service is missing. A write must be `application/json` (415 otherwise).
+
+The web tab is **Mirobody**. It forwards the DSH `token` query parameter the same way the page was opened and sends the session cookie.
 
 ## Boundaries
 
-Not a medical device. No diagnosis, no dose change. An emergency is “call 120” (988 in the US), then stop. See [docs/intended-use.md](docs/intended-use.md).
+Not a medical device. No diagnosis, no dose change. When a message describes an emergency happening now, or real self-harm wording, the plugin appends a note after it so the reply begins with “call 120” (988 in the US) and gives no treatment steps; a request to start, stop or change a medicine gets a note to leave it to the prescribing doctor. The person's words are never replaced. A negated symptom, a family member's history, a risk question or a past event does not trigger it. See [docs/intended-use.md](docs/intended-use.md).
 
 `血红蛋白` resolves to `718-7`. `血脂` resolves to nothing, because it names a panel. Total cholesterol `5.0 mmol/L` resolves to `14647-2`.
 

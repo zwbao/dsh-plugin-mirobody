@@ -44,6 +44,8 @@ dsh plugin --profile web add github:zwbao/dsh-plugin-mirobody
 | `mcpToken` | 地址本身不带凭证时，填账号 JWT（`POST /password/login` 返回的 `access_token`，默认 30 天有效）。只做术语解析可以留空。 |
 | `timeoutMs` | 桥和 MCP 的时限，默认 `30000`。第一次解析要加载词表，可能更慢。 |
 
+Python 桥只拿到最小的环境变量，不继承 Harness 自己的：`PATH`、`HOME`、`LANG`、`LC_ALL`、`TMPDIR`、`MIROBODY_HOME`（来自 `mirobodyHome`）、`PYTHONNOUSERSITE=1` 和 `PYTHONDONTWRITEBYTECODE=1`。所以 `pythonBin` 要能从自己的 site-packages 导入 `mirobody`（即上面的 venv）；`pip install --user` 装的副本和 `PYTHONPATH` 都看不到。源码目录请用 `mirobodyHome`。
+
 ## 工具
 
 | 工具 | 在哪执行 | 返回什么 |
@@ -66,11 +68,13 @@ dsh plugin --profile web add github:zwbao/dsh-plugin-mirobody
 - `GET /api/mirobody/resolve?q=血红蛋白&q=血脂`
 - `GET /api/mirobody/version`
 
-网页页签名为 **Mirobody**。它会带上打开 DSH 时地址栏里的 `token`。
+每个路由先过 DeepSeek Harness 自己的连接检查（Host/Origin 和会话 cookie）：不通过返回 401 或 403，没有连接服务时返回 503。写请求必须是 `application/json`，否则返回 415。
+
+网页页签名为 **Mirobody**。它会带上打开 DSH 时地址栏里的 `token`，并带上会话 cookie。
 
 ## 边界
 
-不是医疗器械。不下诊断，不改剂量。紧急情况只回复拨打 120（在美国为 988），然后停止。详见 [docs/intended-use.md](docs/intended-use.md)。
+不是医疗器械。不下诊断，不改剂量。消息描述正在发生的急症，或确有伤害自己的表达时，插件在这条消息后面追加一条提示，让回复先说拨打 120（在美国为 988），不给处理步骤；要求开始、停用或调整药物时，追加一条提示，交给开药的医生决定。用户的原话不会被替换。否认的症状、家人的病史、风险提问或既往经历不会触发。详见 [docs/intended-use.md](docs/intended-use.md)。
 
 `血红蛋白` 解析为 `718-7`。`血脂` 解析为空，因为它是一类检查而不是一项。总胆固醇 `5.0 mmol/L` 解析为 `14647-2`。
 

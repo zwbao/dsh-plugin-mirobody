@@ -38,12 +38,28 @@ export function discoverPython(configured: string): string {
   return 'python3'
 }
 
-function bridgeEnv(home: string): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
+/**
+ * The whole environment of the Python bridge. Never the harness's own (API keys, tokens, provider
+ * settings): only what a Python process needs to start (PATH, HOME, locale, TMPDIR) and what
+ * bridge/dsh_bridge.py reads (MIROBODY_HOME, the optional source checkout it puts on sys.path).
+ * PYTHONNOUSERSITE=1 keeps ~/.local site-packages out, so mirobody must be installed in the
+ * interpreter's own site-packages (a venv); PYTHONPATH is not passed, mirobodyHome is the way to add
+ * a checkout. Not a sandbox.
+ */
+export function bridgeEnv(home: string): Record<string, string> {
+  const env: Record<string, string> = {
+    PATH: process.env.PATH ?? '',
+    HOME: process.env.HOME ?? '',
+    LANG: process.env.LANG || 'C.UTF-8',
     MIROBODY_HOME: home.trim(),
+    PYTHONNOUSERSITE: '1',
     PYTHONDONTWRITEBYTECODE: '1',
   }
+  for (const name of ['LC_ALL', 'TMPDIR'] as const) {
+    const value = process.env[name]
+    if (value) env[name] = value
+  }
+  return env
 }
 
 function parseBridge(stdout: string, stderr: string, status: number | null): EngineResult {
