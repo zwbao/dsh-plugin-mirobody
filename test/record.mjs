@@ -150,9 +150,15 @@ const server = createServer((req, res) => {
     if (message.method !== 'tools/call') { res.writeHead(400); return res.end() }
     const { name, arguments: args } = message.params
     seen.push({ name, args, session: req.headers['mcp-session-id'] })
+    // The two refusals a live 1.5.9 server sends (captured 2026-11-01): an unknown argument NAME is
+    // refused by the dispatcher in plain text; a bad VALUE by the tool, as its JSON envelope.
     const unknown = name === 'query_health_indicators' ? Object.keys(args).filter((key) => !HEALTH_PROPS.includes(key)).sort() : []
     if (unknown.length > 0) {
-      const envelope = { result: `error (invalid_arguments): ${unknown.map((key) => `${key}: unknown parameter`).join('; ')}`, status: 'error', row_count: 0, truncated: false, error_kind: 'invalid_arguments' }
+      const text = `Unknown argument(s) for ${name}: ${unknown.join(', ')}. Accepted: ${[...HEALTH_PROPS].sort().join(', ')}.`
+      return reply({ content: [{ type: 'text', text }], isError: true })
+    }
+    if (name === 'query_health_indicators' && args.view === 'yearly') {
+      const envelope = { result: 'error (invalid_arguments): view: must be one of raw, minute, hour, day, week, month, stats, latest, trend. Fix the arguments and try once more.', status: 'error', row_count: 0, truncated: false, error_kind: 'invalid_arguments' }
       return reply({ content: [{ type: 'text', text: JSON.stringify(envelope) }], isError: true })
     }
     const data = { result: `ok ${name}`, status: 'ok', row_count: 1, truncated: false }
@@ -172,8 +178,18 @@ try {
   const refused = await call('query_health_indicators', { indicators: ['LDL Cholesterol'], member: 'mom' })
   assert.equal(refused.success, false)
   assert.equal(refused.error_kind, 'invalid_arguments')
-  assert.match(refused.error, /member: unknown parameter/)
+  assert.match(refused.error, /Unknown argument\(s\) for query_health_indicators: member\. Accepted:/)
   assert.equal(seen.at(-1).args.member, 'mom', 'the server decides, not the plugin')
+
+  // A value outside a declared enum never leaves the harness: dsh-tools checks values against the
+  // declared schema (it lets unknown NAMES through, which is why the server's own refusal matters).
+  const beforeBad = seen.length
+  await assert.rejects(call('query_health_indicators', { indicators: ['LDL Cholesterol'], view: 'yearly' }), { code: 'INVALID_ARGS' })
+  assert.equal(seen.length, beforeBad)
+  // The tool's own envelope refusal, as the server sends it for a value it refuses.
+  const envelope = mod.unwrapMcpResponse({ jsonrpc: '2.0', id: 2, result: { isError: true, content: [{ type: 'text', text: JSON.stringify({ result: 'error (invalid_arguments): view: must be one of raw, minute', status: 'error', error_kind: 'invalid_arguments' }) }] } })
+  assert.deepEqual([envelope.success, envelope.error_kind], [false, 'invalid_arguments'])
+  assert.match(envelope.error, /view: must be one of/)
 
   const region = await call('query_genetic_data', { chromosome: '10', start: 94761900, end: 94762900, build: 'GRCh38', rsids: [], gene: '' })
   assert.equal(region.status, 'ok')

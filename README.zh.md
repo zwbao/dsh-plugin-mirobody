@@ -34,7 +34,7 @@ dsh plugin --profile web add github:zwbao/dsh-plugin-mirobody
     timeoutMs: 30000
 ```
 
-`dsh --profile web --dump-config` 能看到这一行生效，然后重启 `dsh web`。从源码装：`git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`。`npm test` 在 `MIROBODY_PYTHON`（或 `./.venv`）能导入时，还会把记录类工具和已安装 Mirobody 自己的参数定义逐项对照；这需要在 `mirobody` 之外装上 `python-dotenv ruamel.yaml cryptography`。
+`dsh --profile web --dump-config` 能看到这一行生效，然后重启 `dsh web`。从源码装：`git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`。`npm test` 在 `MIROBODY_PYTHON`（或 `./.venv`）能导入时，还会把记录类工具和已安装 Mirobody 自己的参数定义逐项对照；这需要在 `mirobody` 之外装上 `python-dotenv ruamel.yaml cryptography`。连着一台在跑的服务器测：`MIROBODY_E2E_MCP_URL=<个人 MCP 链接> npm run e2e`（账号里要有指标、用药计划和基因型文件，否则 Mirobody 会把对应工具藏起来）。
 
 | 字段 | 含义 |
 | --- | --- |
