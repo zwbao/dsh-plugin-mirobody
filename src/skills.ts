@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 
-const SKILL_NAMES = ['terminology', 'readings', 'medications', 'genetics'] as const
+const SKILL_NAMES = ['terminology', 'readings', 'medications', 'genetics', 'pharmacogenomics'] as const
 
 function parseSkill(raw: string): { name: string; description: string; content: string } {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)

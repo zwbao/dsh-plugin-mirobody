@@ -13,6 +13,6 @@ description: Read a medication plan, dose log, or course history from Mirobody. 
 - `log`: doses recorded as taken or skipped. Use this for "did I take it". The default window is the last 30 days when no dates are given. A missing row is not evidence the dose was skipped.
 - `history`: courses with start, end, and why they closed. Use this for "when did I switch", then pass that date to `query_health_indicators` if the question is about a lab afterwards.
 
-`keywords` narrow by drug name or code. Dates are `YYYY-MM-DD`. `member` is a care-circle id.
+`keywords` narrow by drug name or code. Dates are `YYYY-MM-DD`. There is no parameter for another person: the server reads only the account its token or personal link belongs to.
 
 Do not answer interaction questions, dosing questions, or "should I stop this" from this tool. Absence means not recorded here.

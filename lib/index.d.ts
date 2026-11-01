@@ -137,17 +137,41 @@ declare function guardPreStep<M extends StepMessage>(payload: {
 }, next: () => Promise<PreStepDecision<M>>): Promise<PreStepDecision<M>>;
 //#endregion
 //#region src/version.d.ts
-declare const PRODUCT_VERSION = "0.1.1";
-declare const TOOL_NAMES: readonly ["resolve_indicator", "resolve_reading", "convert_unit", "normalize_unit", "query_health_indicators", "query_medications", "query_genetic_data", "mirobody_status"];
+declare const PRODUCT_VERSION = "0.1.2";
+declare const TOOL_NAMES: readonly ["resolve_indicator", "resolve_reading", "convert_unit", "normalize_unit", "query_health_indicators", "query_medications", "query_genetic_data", "query_pharmacogenomics", "mirobody_status"];
 //#endregion
 //#region src/validate.d.ts
+/**
+ * Local checks before a record call leaves the harness.
+ *
+ * The Mirobody server is the authority on its own parameters: it rejects an unknown or malformed
+ * argument with a per-parameter reason (`error_kind: invalid_arguments`), and that answer reaches the
+ * model unchanged. So the plugin does not keep its own copy of the server's grammar. Mirobody 1.5.2
+ * replaced resolution × aggregate with one `view` and dropped `member`; a plugin that refused unknown
+ * parameters locally broke every record call against it (issue #3). Only shape checks the tool
+ * schema cannot express stay here, and each of them matches what the server says.
+ */
 interface Rejection {
   parameter: string;
   reason: string;
 }
 declare function validateHealthQuery(args: Record<string, unknown>): Rejection[];
 declare function validateMedicationQuery(args: Record<string, unknown>): Rejection[];
+/** `start`/`end` here are genomic coordinates (integers), not dates; the server checks the region. */
 declare function validateGeneticQuery(args: Record<string, unknown>): Rejection[];
+//#endregion
+//#region src/mcp.d.ts
+interface McpCallResult {
+  success?: boolean;
+  error_kind?: string;
+  error?: string;
+  hint?: string;
+  code?: number;
+  result?: unknown;
+  text?: string;
+}
+/** Exported for tests: one JSON-RPC answer to the plugin's result shape. */
+declare function unwrapMcpResponse(message: unknown): McpCallResult;
 //#endregion
 //#region src/engine.d.ts
 interface EngineResult {
@@ -205,4 +229,4 @@ declare const name = "dsh-plugin-mirobody";
 declare const inject: string[];
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { CONNECTION_UNAVAILABLE, Config, type ConnectionGuard, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, bridgeEnv, discoverPython, guardPreStep, guardRoute, guidanceNote, inject, isJsonRequest, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };
+export { CONNECTION_UNAVAILABLE, Config, type ConnectionGuard, EMERGENCY_REPLY_ZH, type GuardHit, type GuardLabels, type GuidanceNote, LABEL_KEYS, NO_MEDICATION_CHANGE_ZH, PRODUCT_VERSION, TOOL_NAMES, apply, bridgeEnv, discoverPython, guardPreStep, guardRoute, guidanceNote, inject, isJsonRequest, mentionsMedicine, name, noteMessage, personText, preGuard, ruleLabels, runBridgeSync, unwrapMcpResponse, validateGeneticQuery, validateHealthQuery, validateMedicationQuery, wrapGuardMessage };

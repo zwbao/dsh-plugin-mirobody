@@ -39,13 +39,55 @@ function parseBody(text: string): unknown {
   return JSON.parse(payloads[payloads.length - 1] ?? '')
 }
 
+const REFUSAL_HINTS: Record<string, string> = {
+  invalid_arguments: 'Mirobody did not accept these arguments; the reason names each parameter. Fix them and try once more.',
+  denied: 'Mirobody refused this read. Say the record is not available; do not try another route.',
+}
+
+/**
+ * A tool answer with `isError: true`. Mirobody sends a refused, denied or failed read that way, with the
+ * record tool's envelope (`{result, status: "error", error_kind}`) as JSON text and no structuredContent.
+ * Read as a success, a refusal looked like data to the model.
+ */
+function refusal(content: Array<{ type?: string; text?: string }> | undefined): McpCallResult {
+  const text = Array.isArray(content)
+    ? content.filter((block) => block.type === 'text').map((block) => block.text ?? '').join('\n').trim()
+    : ''
+  let kind = 'internal'
+  let error = text || 'Mirobody returned an error'
+  try {
+    const parsed = JSON.parse(text) as unknown
+    if (parsed && typeof parsed === 'object') {
+      const envelope = parsed as { error_kind?: unknown; result?: unknown; error?: unknown }
+      if (typeof envelope.error_kind === 'string' && envelope.error_kind) kind = envelope.error_kind
+      const said = typeof envelope.result === 'string' ? envelope.result : typeof envelope.error === 'string' ? envelope.error : ''
+      if (said.trim()) error = said.trim()
+    } else if (typeof parsed === 'string' && parsed.trim()) {
+      error = parsed.trim()
+    }
+  } catch {
+    // Plain text: keep it as the error.
+  }
+  return {
+    success: false,
+    error_kind: kind,
+    error,
+    hint: REFUSAL_HINTS[kind] ?? 'The Mirobody server returned an error. Do not invent the missing record.',
+  }
+}
+
+/** Exported for tests: one JSON-RPC answer to the plugin's result shape. */
+export function unwrapMcpResponse(message: unknown): McpCallResult {
+  return unwrap(message)
+}
+
 function unwrap(message: unknown): McpCallResult {
   if (!message || typeof message !== 'object') {
     return { success: false, error_kind: 'internal', error: 'MCP response was not an object' }
   }
   const body = message as {
     error?: { code?: number; message?: string }
-    result?: { content?: Array<{ type?: string; text?: string }>; structuredContent?: unknown }
+    result?: { content?: Array<{ type?: string; text?: string }>; structuredContent?: unknown; isError?: boolean }
   }
   if (body.error) {
     const denied = body.error.code === -32000 || /auth/i.test(body.error.message ?? '')
@@ -59,6 +101,7 @@ function unwrap(message: unknown): McpCallResult {
         : 'The Mirobody MCP server returned an error. Do not invent the missing record.',
     }
   }
+  if (body.result?.isError === true) return refusal(body.result.content)
   const structured = body.result?.structuredContent
   if (structured !== undefined) return { success: true, result: structured }
   const content = body.result?.content
