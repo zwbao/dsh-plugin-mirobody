@@ -34,7 +34,7 @@ Then override the row in `~/.dsh/profiles/web/cordis.patch.yml` (replace the fil
     timeoutMs: 30000
 ```
 
-`dsh --profile web --dump-config` shows the row in effect; then restart `dsh web`. From a checkout: `git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`. `npm test` also compares the record tools with the installed Mirobody's own schemas when `MIROBODY_PYTHON` (or `./.venv`) can import them, which needs `python-dotenv ruamel.yaml cryptography` beside `mirobody`.
+`dsh --profile web --dump-config` shows the row in effect; then restart `dsh web`. From a checkout: `git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`. `npm test` also compares the record tools with the installed Mirobody's own schemas when `MIROBODY_PYTHON` (or `./.venv`) can import them, which needs `python-dotenv ruamel.yaml cryptography` beside `mirobody`. Against a running server: `MIROBODY_E2E_MCP_URL=<personal MCP link> npm run e2e` (the account needs readings, a medication plan and a genotype upload, or Mirobody hides those tools).
 
 | Field | Meaning |
 | --- | --- |

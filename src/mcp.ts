@@ -45,15 +45,24 @@ const REFUSAL_HINTS: Record<string, string> = {
 }
 
 /**
- * A tool answer with `isError: true`. Mirobody sends a refused, denied or failed read that way, with the
- * record tool's envelope (`{result, status: "error", error_kind}`) as JSON text and no structuredContent.
- * Read as a success, a refusal looked like data to the model.
+ * Mirobody's dispatcher (`mcp/tool.py::call_tool`) refuses an argument name the tool does not take
+ * before the tool runs, in plain text: "Unknown argument(s) for query_medications: member. Accepted:
+ * end, keywords, start, view." That is the answer an outdated client gets, so it must read as
+ * invalid_arguments, not as a server fault.
+ */
+const UNKNOWN_ARGUMENTS = /^Unknown argument\(s\) for \S+: /
+
+/**
+ * A tool answer with `isError: true`. Mirobody sends a refused, denied or failed read that way: a
+ * value the tool refuses comes as the record tool's envelope (`{result, status: "error", error_kind}`)
+ * in JSON text, an unknown argument name as the dispatcher's plain text, and neither carries
+ * structuredContent. Read as a success, a refusal looked like data to the model.
  */
 function refusal(content: Array<{ type?: string; text?: string }> | undefined): McpCallResult {
   const text = Array.isArray(content)
     ? content.filter((block) => block.type === 'text').map((block) => block.text ?? '').join('\n').trim()
     : ''
-  let kind = 'internal'
+  let kind = UNKNOWN_ARGUMENTS.test(text) ? 'invalid_arguments' : 'internal'
   let error = text || 'Mirobody returned an error'
   try {
     const parsed = JSON.parse(text) as unknown

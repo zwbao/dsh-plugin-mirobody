@@ -2,6 +2,15 @@
 
 Versions stay below 1.0 until the owner declares the plugin stable. 0.1.0 and 0.1.1 were first published as 1.0.0 and 1.0.1.
 
+## 0.1.3
+
+Run end to end against a live Mirobody 1.5.9 (demo readings, three medication plans, a synthetic 23andMe upload): 23 calls across every view and selector answered, five outdated or wrong calls refused. That run found what 0.1.2's tests could not.
+
+- MCP: Mirobody refuses an unknown argument NAME before the tool runs, in plain text ("Unknown argument(s) for query_medications: member. Accepted: …"), not as the tool's JSON envelope. 0.1.2 read it as `internal`; it is now `invalid_arguments` with the server's sentence. (0.1.1 read it as a successful answer.)
+- A value outside a declared enum (`view: "yearly"`) is stopped by dsh-tools before any request; only unknown names reach the server.
+- `test/e2e.mjs` (`npm run e2e`): set `MIROBODY_E2E_MCP_URL` to a personal MCP link, or the `/mcp` URL plus `MIROBODY_E2E_TOKEN`. Compares each record tool with the live server's `tools/list` inputSchema, calls every view and selector, and checks the refusals. Skipped without the variable.
+- `test/record.mjs`: the stand-in server now sends the two refusal forms captured from the live server.
+
 ## 0.1.2
 
 Follows Mirobody 1.5.2 and later (tested against 1.5.9), whose record tools changed parameters ([#3](https://github.com/zwbao/dsh-plugin-mirobody/issues/3)). Against a 1.5.2+ server, every record call except a bare keywords/indicators/start/end query failed: the plugin refused the new parameters and the server refused the old ones.
