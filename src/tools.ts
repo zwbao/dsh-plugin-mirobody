@@ -156,32 +156,25 @@ export function registerTools(ctx: Context, config: () => Config): void {
 
   ctx.tools.register(defineTool({
     name: 'query_health_indicators',
-    description: 'Read one person\'s coded health indicators from their Mirobody server. Read-only. Omit both keywords and indicators to get the catalogue. Use keywords when the exact name is unknown, then copy exact indicator names into a later call. resolution is raw or one value per minute/hour/day/week/month. aggregate none returns rows; stats returns count/min/max/avg/first/last/change (use it for "how did it change" and for a baseline); latest returns the most recent value per indicator. latest is not defined for minute or hour. limit applies only to raw rows without aggregation (1–500). Give keywords or indicators, not both. Dates are YYYY-MM-DD in the person\'s zone. Absence means not on file, not "normal". Every number you cite must come from this result. Requires mcpUrl.',
+    description: 'Read one person\'s health record from their Mirobody server: readings (labs, vitals, wearable metrics) and what they reported (symptoms, diagnoses they were given, notes, in their own words). Read-only. Omit both keywords and indicators to get the catalogue of what this person has. Use keywords when the exact name is unknown, then copy exact indicator names into a later call. Pick one view: raw (default) is the readings, newest first, each with its file; minute/hour/day/week/month is one point per period, for a chart; stats is count/min/max/avg/sum/first/last/change over the window (use it for totals, "how often" and a baseline; do not add rows up yourself); trend is numeric direction and shape over the daily series; latest is the most recent value per indicator. Give keywords or indicators, not both. Dates are YYYY-MM-DD in the person\'s zone; omit both for the whole record. The server caps rows and says when it cut them: narrow the window or use stats. Absence means not on file, not "normal". A reported condition is self-reported. Every number you cite must come from this result. Do not call twice with the same arguments. Requires mcpUrl.',
     parameters: {
       keywords: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Free-text terms against the person\'s catalogue, any language. Omit both keywords and indicators for the catalogue.',
+        description: 'Free-text terms against the person\'s catalogue, any language (e.g. ["blood pressure", "血压"], or a symptom such as ["headache"]). At most 20. Omit both keywords and indicators for the catalogue.',
       },
       indicators: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Exact indicator names copied from a previous result. Preferred once known.',
+        description: 'Exact indicator names copied from a previous result, at most 50. Preferred once known.',
       },
-      start: { type: 'string', description: 'First local date, inclusive (YYYY-MM-DD).' },
+      start: { type: 'string', description: 'First local date, inclusive (YYYY-MM-DD, the person\'s time zone). Omit both dates for the whole record.' },
       end: { type: 'string', description: 'Last local date, inclusive (YYYY-MM-DD).' },
-      resolution: {
+      view: {
         type: 'string',
-        enum: ['raw', 'minute', 'hour', 'day', 'week', 'month'],
-        description: 'raw readings, or one value per minute/hour/day/week/month.',
+        enum: ['raw', 'minute', 'hour', 'day', 'week', 'month', 'stats', 'latest', 'trend'],
+        description: 'raw (default): readings, newest first. minute/hour/day/week/month: one point per period. stats: count/min/max/avg/sum/first/last/change. trend: direction and shape of the daily series. latest: most recent value per indicator.',
       },
-      aggregate: {
-        type: 'string',
-        enum: ['none', 'stats', 'latest'],
-        description: 'none: rows; stats: count/min/max/avg/first/last/change; latest: most recent value per indicator.',
-      },
-      limit: { type: 'integer', description: 'Raw rows per indicator, 1–500. Only for resolution=raw and aggregate=none.' },
-      member: { type: 'string', description: 'Care-circle member id. Omit for the caller.' },
     },
     output: jsonOut,
     timeoutMs: 60000,
@@ -195,7 +188,7 @@ export function registerTools(ctx: Context, config: () => Config): void {
 
   ctx.tools.register(defineTool({
     name: 'query_medications',
-    description: 'Read this person\'s medications from their Mirobody server. Read-only: it cannot add, change, or stop a medication. view=plan is the list they intend to take, with status and today\'s dose states — NOT an intake record. view=log is doses actually recorded taken or skipped (default window: last 30 days). view=history is courses with start, end, and why they ended, which is how a "when did I switch" question gets a date for query_health_indicators. A plan is not evidence a dose was swallowed. A dose missing from the log is not evidence it was not taken. Do not use this for drug information, interactions, or dose advice. Requires mcpUrl.',
+    description: 'Read this person\'s medications from their Mirobody server. Read-only: it cannot add, change, or stop a medication. view=plan is the list they intend to take, with status and today\'s dose states — NOT an intake record. view=log is doses actually recorded taken or skipped (default window: last 30 days). view=history is courses with start, end, and why they ended, which is how a "when did I switch" question gets a date for query_health_indicators. A plan is not evidence a dose was swallowed. A dose missing from the log is not evidence it was not taken. The server reads only the account the token or personal link belongs to. Do not use this for drug information, interactions, or dose advice. Requires mcpUrl.',
     parameters: {
       view: {
         type: 'string',
@@ -205,11 +198,10 @@ export function registerTools(ctx: Context, config: () => Config): void {
       keywords: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Drug names or codes to narrow to. Omit for every medication.',
+        description: 'Drug names or codes to narrow to, any language, at most 20. Omit for every medication.',
       },
       start: { type: 'string', description: 'First local date, inclusive (YYYY-MM-DD).' },
       end: { type: 'string', description: 'Last local date, inclusive (YYYY-MM-DD).' },
-      member: { type: 'string', description: 'Care-circle member id. Omit for the caller.' },
     },
     output: jsonOut,
     timeoutMs: 60000,
@@ -223,27 +215,22 @@ export function registerTools(ctx: Context, config: () => Config): void {
 
   ctx.tools.register(defineTool({
     name: 'query_genetic_data',
-    description: 'Read this person\'s genotype calls at named rsIDs from the genotype file they uploaded to Mirobody. Read-only. There is no catalogue: name the rsIDs (at most 50). An rsID missing from the result was not typed, which is not evidence about the allele. Genotypes are unphased: "AG" does not say which parent contributed which allele. include_nearby returns variants near by POSITION only; proximity is not linkage and says nothing about the queried variant\'s trait. Report the genotype. Do not interpret risk, do not diagnose, and do not turn a call into a treatment. Requires mcpUrl.',
+    description: 'Read this person\'s genotype calls from the genotype file they uploaded to Mirobody. Read-only. Choose ONE selector per call: rsids (at most 50 dbSNP ids), gene (an HGNC symbol such as CYP2C19), or a region (chromosome + start + end + build). With no selector it returns only a summary of the upload (vendor, build, rows). A locus missing from the result, a no-call, or an unresolved call is not a normal genotype and not evidence about the allele. Genotypes are unphased: "AG" does not say which parent contributed which allele. A consumer array is not a diagnosis. Report the call and state the upload\'s source and build. Do not interpret risk, do not diagnose, and do not turn a call into a treatment. Requires mcpUrl.',
     parameters: {
       rsids: {
         type: 'array',
         items: { type: 'string' },
-        required: true,
         description: 'dbSNP identifiers, e.g. ["rs4988235", "rs1801133"]. At most 50.',
       },
-      include_nearby: {
-        type: 'boolean',
-        description: 'Also return typed variants within nearby_range of each hit. Default true on the server when omitted.',
+      gene: { type: 'string', description: 'HGNC gene symbol, e.g. CYP2C19.' },
+      chromosome: { type: 'string', description: 'Chromosome for a region query: 1–22, X, Y, PAR, or MT.' },
+      start: { type: 'integer', description: 'Region start coordinate, inclusive, in the chosen build (≥ 1).' },
+      end: { type: 'integer', description: 'Region end coordinate, inclusive, in the chosen build.' },
+      build: {
+        type: 'string',
+        enum: ['GRCh37', 'GRCh38', 'raw'],
+        description: 'Required with a region. raw uses the upload\'s own, unverified positions (the only choice for PAR).',
       },
-      nearby_range: {
-        type: 'integer',
-        description: 'Half-window for include_nearby, in base pairs. Server default 1000000.',
-      },
-      limit: {
-        type: 'integer',
-        description: 'Direct hits returned, 1–500. Name fewer rsIDs instead of raising it.',
-      },
-      member: { type: 'string', description: 'Care-circle member id. Omit for the caller.' },
     },
     output: jsonOut,
     timeoutMs: 60000,
@@ -252,6 +239,29 @@ export function registerTools(ctx: Context, config: () => Config): void {
       const problems = validateGeneticQuery(args)
       if (problems.length > 0) return asJson(invalidArguments(problems))
       return asJson(await record(config(), 'query_genetic_data', args))
+    },
+  }))
+
+  ctx.tools.register(defineTool({
+    name: 'query_pharmacogenomics',
+    description: 'Check CPIC level A/B drug–gene pairs against the person\'s uploaded genotype file on their Mirobody server, and say which defining sites the upload typed, missed, or could not call. Read-only. Name drugs (exact CPIC generic names) and/or genes (HGNC symbols), at most 10 each; with neither, it checks the person\'s active medication plans. A CPIC level says a guideline exists for that gene–drug pair; it is NOT this person\'s phenotype or diplotype, and the server returns no prescribing advice. Missing or no-call sites never mean a normal diplotype; an array cannot establish phase or copy number. No matching pair does not prove there is no interaction. These rows carry no rid: cite a genotype from query_genetic_data. Never advise starting, stopping, or changing a medicine or a dose. Requires mcpUrl.',
+    parameters: {
+      drugs: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Exact CPIC generic drug names, e.g. ["clopidogrel"]. At most 10. Omit with genes to check current medication plans.',
+      },
+      genes: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'HGNC symbols, e.g. ["CYP2C19"]. At most 10. Omit with drugs to check current medication plans.',
+      },
+    },
+    output: jsonOut,
+    timeoutMs: 60000,
+    isConcurrencySafe: () => true,
+    async execute(args) {
+      return asJson(await record(config(), 'query_pharmacogenomics', args))
     },
   }))
 

@@ -10,15 +10,16 @@ const root = dirname(fileURLToPath(import.meta.url))
 const pkg = require('../package.json')
 
 assert.equal(pkg.name, 'dsh-plugin-mirobody')
-assert.equal(pkg.version, '0.1.1')
+assert.equal(pkg.version, '0.1.2')
 assert.equal(pkg.license, 'Apache-2.0')
 assert.ok(pkg.dsh.bundle.patch)
 assert.ok(pkg.dsh.client.inject.includes('slots'))
 
 const mod = await import('../lib/index.js')
 assert.equal(mod.name, 'dsh-plugin-mirobody')
-assert.equal(mod.PRODUCT_VERSION, '0.1.1')
-assert.equal(mod.TOOL_NAMES.length, 8)
+assert.equal(mod.PRODUCT_VERSION, '0.1.2')
+assert.equal(mod.TOOL_NAMES.length, 9)
+assert.ok(mod.TOOL_NAMES.includes('query_pharmacogenomics'))
 assert.deepEqual(mod.TOOL_NAMES.slice(0, 4), [
   'resolve_indicator',
   'resolve_reading',
@@ -33,25 +34,25 @@ assert.match(mod.wrapGuardMessage('胸痛', mod.preGuard('胸痛')), /120/)
 
 const both = mod.validateHealthQuery({ keywords: ['血压'], indicators: ['Systolic'] })
 assert.ok(both.some((item) => item.parameter === 'keywords+indicators'))
-const catalog = mod.validateHealthQuery({ aggregate: 'stats' })
-assert.ok(catalog.some((item) => item.parameter === 'aggregate'))
-const minuteLatest = mod.validateHealthQuery({
-  indicators: ['Heart Rate'],
-  resolution: 'minute',
-  aggregate: 'latest',
-})
-assert.ok(minuteLatest.some((item) => item.parameter === 'aggregate'))
+// Mirobody 1.5.2+ parameters pass; the server, not the plugin, decides what it accepts (issue #3).
+assert.equal(mod.validateHealthQuery({ indicators: ['Heart Rate'], view: 'stats' }).length, 0)
+assert.equal(mod.validateHealthQuery({ indicators: ['LDL'], view: 'trend', start: '2026-01-01', end: '2026-03-01' }).length, 0)
+assert.equal(mod.validateHealthQuery({ indicators: ['LDL'], view: 'stats', value_min: 1, value_max: 3 }).length, 0, 'a newer server parameter is not refused locally')
 assert.equal(mod.validateHealthQuery({ keywords: ['LDL'], start: '2026-01-01', end: '2026-03-01' }).length, 0)
 assert.ok(mod.validateHealthQuery({ start: '03/01/2026' }).some((item) => item.parameter === 'start'))
+assert.ok(mod.validateHealthQuery({ end: '2025-06-31' }).some((item) => item.parameter === 'end' && /calendar/.test(item.reason)))
 
-assert.ok(mod.validateMedicationQuery({ view: 'dose' }).some((item) => item.parameter === 'view'))
 assert.equal(mod.validateMedicationQuery({ view: 'log', keywords: ['metformin'] }).length, 0)
+assert.ok(mod.validateMedicationQuery({ start: '2026-13-01' }).some((item) => item.parameter === 'start'))
 
-assert.ok(mod.validateGeneticQuery({}).some((item) => item.parameter === 'rsids'))
-assert.equal(mod.validateGeneticQuery({ rsids: ['rs4988235'], include_nearby: false }).length, 0)
-assert.ok(mod.validateGeneticQuery({ rsids: ['rs1'], nearby_range: 0 }).some((item) => item.parameter === 'nearby_range'))
+assert.equal(mod.validateGeneticQuery({}).length, 0, 'no selector is the upload summary')
+assert.equal(mod.validateGeneticQuery({ rsids: ['rs4988235'] }).length, 0)
+assert.equal(mod.validateGeneticQuery({ gene: 'CYP2C19' }).length, 0)
+assert.equal(mod.validateGeneticQuery({ chromosome: '10', start: 94761900, end: 94762900, build: 'GRCh38' }).length, 0, 'start/end are coordinates, not dates')
+assert.ok(mod.validateGeneticQuery({ rsids: ['CYP2C19*2'] }).some((item) => item.parameter === 'rsids'))
+assert.ok(mod.validateGeneticQuery({ rsids: Array.from({ length: 51 }, (_, i) => `rs${i + 1}`) }).some((item) => /50/.test(item.reason)))
 
-for (const name of ['terminology', 'readings', 'medications', 'genetics']) {
+for (const name of ['terminology', 'readings', 'medications', 'genetics', 'pharmacogenomics']) {
   const raw = readFileSync(join(root, '..', 'skills', name, 'SKILL.md'), 'utf8')
   assert.match(raw, /^---\nname: mirobody-/)
   assert.match(raw, /description:/)

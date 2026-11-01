@@ -4,11 +4,11 @@
 
 把 [Mirobody](https://github.com/thetahealth/mirobody) 的术语引擎和只读记录工具装进 DeepSeek Harness。指标名收成一个 LOINC，单位收成 UCUM，病历、用药和基因型仍从 Mirobody 自己的 `/mcp` 读取。
 
-Python 引擎继续负责解析。这个包是 Harness 侧：8 个工具、4 个技能、一个 Mirobody 页签和斜杠命令。LOINC 词表、Postgres、手环 OAuth 和文件入库仍在 Mirobody 里，没有重写。
+Python 引擎继续负责解析。这个包是 Harness 侧：9 个工具、5 个技能、一个 Mirobody 页签和斜杠命令。LOINC 词表、Postgres、手环 OAuth 和文件入库仍在 Mirobody 里，没有重写。
 
 ## 安装
 
-需要 Node 22.19+、pnpm（`dsh plugin` 用它装包）和能 `import mirobody` 的 Python 3.12+。
+需要 Node 22.19+、pnpm（`dsh plugin` 用它装包）和能 `import mirobody` 的 Python 3.12+。记录类工具按 Mirobody 1.5.2 及之后的参数调用（已对 1.5.9 测试）；1.5.1 的服务器会拒绝其中的 `view` 参数。
 
 **和 [dsh-plugin-longpi](https://github.com/zwbao/dsh-plugin-longpi) 一起用时不用单独装。** LongPi 把本插件声明为依赖，`dsh plugin add` 会一起装进 profile，由 LongPi 按它自己那一行的配置挂载。再单独 `add` 一次会让同一组工具注册两遍。
 
@@ -34,13 +34,13 @@ dsh plugin --profile web add github:zwbao/dsh-plugin-mirobody
     timeoutMs: 30000
 ```
 
-`dsh --profile web --dump-config` 能看到这一行生效，然后重启 `dsh web`。从源码装：`git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`。
+`dsh --profile web --dump-config` 能看到这一行生效，然后重启 `dsh web`。从源码装：`git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`。`npm test` 在 `MIROBODY_PYTHON`（或 `./.venv`）能导入时，还会把记录类工具和已安装 Mirobody 自己的参数定义逐项对照；这需要在 `mirobody` 之外装上 `python-dotenv ruamel.yaml cryptography`。
 
 | 字段 | 含义 |
 | --- | --- |
 | `pythonBin` | 能导入 mirobody 的解释器。留空时依次尝试 `python3.14`、`python3.13`、`python3.12`、`python3`。 |
 | `mirobodyHome` | 可选的源码目录，会放进 `sys.path`。源码树要先 `git lfs pull`，否则没有 LOINC 数据包。 |
-| `mcpUrl` | 记录服务器。Mirobody 设置 → MCP 里的个人地址（`…/mcp/<密钥>`，默认 30 天有效，Mirobody 的 `MCP_URL_TTL_DAYS` 可改），或 `http://127.0.0.1:18060/mcp` 加 `mcpToken`。 |
+| `mcpUrl` | 记录服务器。Mirobody 设置 → MCP 里的个人地址（`…/mcp/<密钥>`，Mirobody 1.5.3 起默认 10 天有效，`MCP_URL_TTL_DAYS` 可改），或 `http://127.0.0.1:18060/mcp` 加 `mcpToken`。 |
 | `mcpToken` | 地址本身不带凭证时，填账号 JWT（`POST /password/login` 返回的 `access_token`，默认 30 天有效）。只做术语解析可以留空。 |
 | `timeoutMs` | 桥和 MCP 的时限，默认 `30000`。第一次解析要加载词表，可能更慢。 |
 
@@ -54,10 +54,13 @@ Python 桥只拿到最小的环境变量，不继承 Harness 自己的：`PATH`�
 | `resolve_reading` | 本机引擎 | 名字加上数值和单位后的 LOINC。单位会改码。 |
 | `convert_unit` | 本机引擎 | 换算后的数；单位不能互化时 `converted` 为 null。 |
 | `normalize_unit` | 本机引擎 | UCUM 写法和性质族。 |
-| `query_health_indicators` | Mirobody `/mcp` | 目录、原始行、分桶、统计或最新值。 |
+| `query_health_indicators` | Mirobody `/mcp` | 目录；选定指标后按一个 `view` 返回：原始行、分钟到月的分桶、统计、趋势或最新值。 |
 | `query_medications` | Mirobody `/mcp` | 用药计划、服药记录或疗程。只读。 |
-| `query_genetic_data` | Mirobody `/mcp` | 指定 rsID 的基因型。文件里没有的 rsID 是“没分型”，不是阴性。 |
+| `query_genetic_data` | Mirobody `/mcp` | 按 rsID、基因或区段查基因型；不给条件时只返回上传文件概况。文件里没有的位点是“没分型”，不是阴性。 |
+| `query_pharmacogenomics` | Mirobody `/mcp` | CPIC A/B 级药物–基因对，以及上传文件覆盖了哪些定义位点。不是表型，也不给剂量。 |
 | `mirobody_status` | 本机 | 引擎能否导入、`mcpUrl` 是否已填。不返回病历，也不返回 token。 |
+
+记录类工具只读 token 或个人链接所属的那个账号，没有读别人数据的参数。参数由 Mirobody 自己校验，拒绝时会逐个参数说明原因，插件不再另存一份服务器的参数规则。
 
 ## 命令和 HTTP
 

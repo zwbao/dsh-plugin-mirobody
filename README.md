@@ -4,11 +4,11 @@
 
 DeepSeek Harness plugin for [Mirobody](https://github.com/thetahealth/mirobody): one LOINC code for a lab name, one UCUM unit, and the same read-only record tools Mirobody serves at `/mcp`.
 
-The Python engine stays the resolver. This package is the harness: eight tools, four skills, a Mirobody tab, and slash commands. It does not reimplement the LOINC bundle, Postgres, wearable OAuth, or file ingestion.
+The Python engine stays the resolver. This package is the harness: nine tools, five skills, a Mirobody tab, and slash commands. It does not reimplement the LOINC bundle, Postgres, wearable OAuth, or file ingestion.
 
 ## Install
 
-Requires Node 22.19+, pnpm (`dsh plugin` installs through it), and a Python 3.12+ interpreter with `mirobody` installed.
+Requires Node 22.19+, pnpm (`dsh plugin` installs through it), and a Python 3.12+ interpreter with `mirobody` installed. The record tools follow Mirobody 1.5.2 and later (tested against 1.5.9); a 1.5.1 server rejects their `view` parameter.
 
 **With [dsh-plugin-longpi](https://github.com/zwbao/dsh-plugin-longpi) you do not install this separately.** LongPi declares this plugin as a dependency, so `dsh plugin add` puts it in the profile and LongPi mounts it with the settings in LongPi's own row. Adding it a second time registers the same tools twice.
 
@@ -34,13 +34,13 @@ Then override the row in `~/.dsh/profiles/web/cordis.patch.yml` (replace the fil
     timeoutMs: 30000
 ```
 
-`dsh --profile web --dump-config` shows the row in effect; then restart `dsh web`. From a checkout: `git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`.
+`dsh --profile web --dump-config` shows the row in effect; then restart `dsh web`. From a checkout: `git clone https://github.com/zwbao/dsh-plugin-mirobody && cd dsh-plugin-mirobody && npm install && npm test && dsh plugin --profile web add link:$PWD`. `npm test` also compares the record tools with the installed Mirobody's own schemas when `MIROBODY_PYTHON` (or `./.venv`) can import them, which needs `python-dotenv ruamel.yaml cryptography` beside `mirobody`.
 
 | Field | Meaning |
 | --- | --- |
 | `pythonBin` | Interpreter that can `import mirobody`. Empty tries `python3.14`, `python3.13`, `python3.12`, then `python3`. |
 | `mirobodyHome` | Optional source checkout added to `sys.path`. A checkout still needs `git lfs pull` for the LOINC bundle. |
-| `mcpUrl` | Record server: the personal URL from Mirobody Settings → MCP (`…/mcp/<secret>`, valid 30 days by default, Mirobody's `MCP_URL_TTL_DAYS`), or `http://127.0.0.1:18060/mcp` with `mcpToken`. |
+| `mcpUrl` | Record server: the personal URL from Mirobody Settings → MCP (`…/mcp/<secret>`, valid 10 days by default since Mirobody 1.5.3, `MCP_URL_TTL_DAYS`), or `http://127.0.0.1:18060/mcp` with `mcpToken`. |
 | `mcpToken` | Account JWT when the URL does not carry one (the `access_token` from `POST /password/login`, valid 30 days by default). Leave empty for terminology-only use. |
 | `timeoutMs` | Bridge and MCP budget. Default `30000`. First resolve loads the bundle and can be slower. |
 
@@ -54,10 +54,13 @@ The Python bridge starts with a minimal environment, never the harness's own: `P
 | `resolve_reading` | local engine | LOINC for a name plus value and unit. The unit selects the code. |
 | `convert_unit` | local engine | A converted number, or `null` when the units are not interconvertible. |
 | `normalize_unit` | local engine | UCUM form and property family. |
-| `query_health_indicators` | Mirobody `/mcp` | Catalogue, rows, buckets, stats, or latest. |
+| `query_health_indicators` | Mirobody `/mcp` | Catalogue, then one `view`: raw rows, minute…month points, stats, trend, or latest. |
 | `query_medications` | Mirobody `/mcp` | Plan, dose log, or course history. Read-only. |
-| `query_genetic_data` | Mirobody `/mcp` | Genotype calls at named rsIDs. A missing rsID was not typed. |
+| `query_genetic_data` | Mirobody `/mcp` | Genotype calls by rsID, gene, or region; a summary with none. A missing locus was not typed. |
+| `query_pharmacogenomics` | Mirobody `/mcp` | CPIC A/B drug–gene pairs and which defining sites the upload covers. Not a phenotype, not dosing. |
 | `mirobody_status` | local | Whether the engine imports, and whether `mcpUrl` is set. No chart data, no token. |
+
+Record tools read only the account the token or personal link belongs to; there is no parameter for another person. Mirobody checks the arguments itself and its refusal names each parameter, so the plugin does not keep a copy of the server's grammar.
 
 ## Commands and HTTP
 
